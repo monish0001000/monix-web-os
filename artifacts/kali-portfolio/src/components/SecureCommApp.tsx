@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 import WindowChrome from './WindowChrome';
 import CommLogin from './comm/CommLogin';
 import CommSidebar from './comm/CommSidebar';
 import CommChat from './comm/CommChat';
 import CommVideoCall from './comm/CommVideoCall';
+import CommSettingsModal from './comm/CommSettingsModal';
 import { Peer, Message, CallSignal, CallHistoryEntry, CallParticipant, CallSession } from './comm/CommTypes';
+import { createCommChannel, CommChannel, getSavedCommBackend, CommBackendType } from '@/lib/CommSignalingClient';
 
 interface SecureCommAppProps {
   onClose: () => void;
@@ -23,6 +24,8 @@ export default function SecureCommApp({
   const [localPeer, setLocalPeer] = useState<Peer | null>(null);
   const [peers, setPeers] = useState<Peer[]>([]);
   const [activeChat, setActiveChat] = useState<Peer | null>(null);
+  const [backend, setBackend] = useState<CommBackendType>(getSavedCommBackend());
+  const [showSettings, setShowSettings] = useState(false);
   const activeChatRef = useRef<Peer | null>(null);
 
   useEffect(() => {
@@ -67,7 +70,7 @@ export default function SecureCommApp({
 
   const pcsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const remoteStreamsRef = useRef<Map<string, MediaStream>>(new Map());
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const channelRef = useRef<CommChannel | null>(null);
   const iceCandidateQueueRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
   const dataPcsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const dataChannelsRef = useRef<Map<string, RTCDataChannel>>(new Map());
@@ -100,8 +103,10 @@ export default function SecureCommApp({
   useEffect(() => {
     if (!localPeer) return;
 
-    const channel = supabase.channel('monix-secure-comm', {
-      config: { presence: { key: localPeer.id }, broadcast: { self: false } }
+    const channel = createCommChannel('monix-secure-comm', {
+      peerId: localPeer.id,
+      alias: localPeer.alias,
+      backend,
     });
     channelRef.current = channel;
 
@@ -209,7 +214,7 @@ export default function SecureCommApp({
       pcsRef.current.clear();
       remoteStreamsRef.current.clear();
     };
-  }, [localPeer]);
+  }, [localPeer, backend]);
 
   useEffect(() => {
     if (!activeCall || activeCall.status !== 'connected') return;
@@ -621,6 +626,8 @@ export default function SecureCommApp({
               unreadMessages={unreadMessages}
               onSelectChat={setActiveChat}
               onStartCall={startCall}
+              onOpenSettings={() => setShowSettings(true)}
+              backend={backend}
             />
             <CommChat
               localPeer={localPeer}
@@ -632,6 +639,15 @@ export default function SecureCommApp({
               onStartCall={startCall}
             />
           </div>
+
+          <CommSettingsModal
+            isOpen={showSettings}
+            onClose={() => setShowSettings(false)}
+            currentBackend={backend}
+            onBackendChange={setBackend}
+            onlineCount={peers.length}
+            localPeerAlias={localPeer.alias}
+          />
         </div>
       )}
     </WindowChrome>

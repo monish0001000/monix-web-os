@@ -4,6 +4,10 @@ export interface Tab {
   url: string;
   favicon?: string;
   isLoading: boolean;
+  history?: string[];
+  historyIndex?: number;
+  mode?: 'proxy' | 'direct' | 'reader';
+  reloadKey?: number;
 }
 
 export interface Message {
@@ -19,6 +23,9 @@ export interface Download {
   filename: string;
   progress: number;
   status: 'downloading' | 'completed' | 'failed';
+  url?: string;
+  size?: string;
+  timestamp?: number;
 }
 
 export interface Extension {
@@ -26,6 +33,7 @@ export interface Extension {
   name: string;
   icon: string;
   isEnabled: boolean;
+  description?: string;
 }
 
 export interface HistoryEntry {
@@ -33,4 +41,12 @@ export interface HistoryEntry {
   url: string;
   title: string;
   timestamp: number;
+  favicon?: string;
+}
+
+export interface Bookmark {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string;
 }

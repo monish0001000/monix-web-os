@@ -9,9 +9,11 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "moduleResolution": "bundler",
-    "types": ["node", "vite/client"],
+    "types": ["node", "vite/client", "react", "react-dom"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@awareness/*": ["../../awareness-simulator/src/*"],
+      "motion/react": ["../../node_modules/framer-motion"]
     }
   },
   "references": [

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Users, Phone, Video, Clock, ArrowDownLeft, ArrowUpRight, XCircle } from 'lucide-react';
+import { Users, Phone, Video, Clock, Settings, Copy, Check, Radio } from 'lucide-react';
 import { Peer, CallHistoryEntry } from './CommTypes';
+import { CommBackendType } from '../../lib/CommSignalingClient';
 
 interface SidebarProps {
   localPeer: Peer;
@@ -10,26 +11,51 @@ interface SidebarProps {
   unreadMessages?: Record<string, number>;
   onSelectChat: (peer: Peer) => void;
   onStartCall: (peerId: string, isVideo: boolean) => void;
+  onOpenSettings?: () => void;
+  backend?: CommBackendType;
 }
 
-export default function CommSidebar({ localPeer, peers, activeChat, callHistory, unreadMessages = {}, onSelectChat, onStartCall }: SidebarProps) {
+export default function CommSidebar({
+  localPeer, peers, activeChat, callHistory, unreadMessages = {},
+  onSelectChat, onStartCall, onOpenSettings, backend = 'mesh'
+}: SidebarProps) {
   const [activeTab, setActiveTab] = useState<'peers' | 'history'>('peers');
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyInvite = () => {
+    navigator.clipboard.writeText(window.location.origin);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   return (
-    <div className="w-72 bg-[#0a0a0a] border-r border-[#1a1a1a] flex flex-col h-full shrink-0">
+    <div className="w-72 bg-[#0a0a0a] border-r border-[#1a1a1a] flex flex-col h-full shrink-0 font-sans">
       <div className="p-4 border-b border-[#1a1a1a]">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-[rgba(0,255,255,0.2)] border border-[#00ffff] flex items-center justify-center text-[#00ffff] font-bold uppercase">
-            {localPeer.alias.substring(0, 2)}
-          </div>
-          <div>
-            <h2 className="text-sm uppercase tracking-widest font-bold text-[#00ffff]">{localPeer.alias}</h2>
-            <div className="text-xs opacity-70 text-[#10b981] flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
-              SYS.ONLINE
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[rgba(0,255,255,0.2)] border border-[#00ffff] flex items-center justify-center text-[#00ffff] font-bold uppercase shadow-[0_0_10px_rgba(0,255,255,0.2)]">
+              {localPeer.alias.substring(0, 2)}
+            </div>
+            <div>
+              <h2 className="text-sm uppercase tracking-widest font-bold text-[#00ffff]">{localPeer.alias}</h2>
+              <div className="text-[10px] text-[#10b981] flex items-center gap-1.5 font-mono">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+                ONLINE • {backend.toUpperCase()}
+              </div>
             </div>
           </div>
+
+          {onOpenSettings && (
+            <button
+              onClick={onOpenSettings}
+              className="p-1.5 rounded-lg border border-white/5 hover:border-[#00ffff]/40 bg-zinc-900 text-zinc-400 hover:text-[#00ffff] transition-colors"
+              title="Network & Signaling Settings"
+            >
+              <Settings size={14} />
+            </button>
+          )}
         </div>
+
         <div className="flex border border-[#1a1a1a] rounded overflow-hidden">
           {(['peers', 'history'] as const).map(tab => (
             <button
@@ -37,7 +63,7 @@ export default function CommSidebar({ localPeer, peers, activeChat, callHistory,
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-1 text-xs uppercase tracking-widest font-bold transition-colors ${activeTab === tab ? 'bg-[#00ffff] text-[#050505]' : 'bg-transparent text-[#00ffff] hover:bg-[rgba(0,255,255,0.1)]'}`}
             >
-              {tab === 'peers' ? 'Peers' : 'History'}
+              {tab === 'peers' ? `Peers (${peers.length})` : 'History'}
             </button>
           ))}
         </div>
@@ -45,29 +71,50 @@ export default function CommSidebar({ localPeer, peers, activeChat, callHistory,
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {activeTab === 'peers' ? (
-          <div className="p-2">
-            <div className="text-xs opacity-50 uppercase mb-2 flex items-center gap-2">
-              <Users size={14} /> Connected_Peers
+          <div className="p-2 space-y-2">
+            <div className="text-[10px] opacity-60 uppercase mb-2 flex items-center justify-between font-mono">
+              <span className="flex items-center gap-1.5">
+                <Users size={12} /> Connected_Nodes
+              </span>
+              <span className="text-[#00ffff]">{peers.length} ONLINE</span>
             </div>
+
             {peers.length === 0 ? (
-              <div className="text-xs opacity-50 italic">No other nodes detected.</div>
+              <div className="p-4 rounded-xl bg-zinc-950/80 border border-white/5 text-center space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-[rgba(0,255,255,0.08)] border border-[#00ffff]/20 flex items-center justify-center mx-auto text-[#00ffff]">
+                  <Radio size={18} className="animate-pulse" />
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-white">Listening for nodes...</div>
+                  <p className="text-[10px] text-zinc-400 leading-relaxed">
+                    Open MONIX Comm on another phone, laptop, or private browser window on your network to connect instantly.
+                  </p>
+                </div>
+                <button
+                  onClick={handleCopyInvite}
+                  className="w-full py-1.5 px-3 rounded-lg bg-[rgba(0,255,255,0.12)] border border-[#00ffff]/40 text-[#00ffff] hover:bg-[rgba(0,255,255,0.25)] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  {copiedLink ? <Check size={12} /> : <Copy size={12} />}
+                  <span>{copiedLink ? 'Link Copied!' : 'Copy Device Link'}</span>
+                </button>
+              </div>
             ) : (
               peers.map(peer => {
                 const isActive = activeChat?.id === peer.id;
                 return (
                   <div
                     key={peer.id}
-                    className={`w-full flex items-center justify-between p-2 border transition-colors group ${isActive ? 'bg-[rgba(0,255,255,0.1)] border-[#00ffff]' : 'bg-transparent border-transparent hover:bg-[#050505] hover:border-[#1a1a1a]'}`}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition-colors group ${isActive ? 'bg-[rgba(0,255,255,0.1)] border-[#00ffff]' : 'bg-transparent border-transparent hover:bg-zinc-900/60 hover:border-white/10'}`}
                   >
                     <button onClick={() => onSelectChat(peer)} className="flex-1 flex items-center gap-3 text-left">
                       <div className="relative">
-                        <div className="w-8 h-8 rounded-full bg-[#050505] border border-[#1a1a1a] flex items-center justify-center text-[#00ffff] text-xs font-bold">
+                        <div className="w-8 h-8 rounded-full bg-[#050505] border border-[#00ffff]/40 flex items-center justify-center text-[#00ffff] text-xs font-bold">
                           {peer.alias.substring(0, 2).toUpperCase()}
                         </div>
-                        <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-[#10b981] border-2 border-[#0a0a0a] animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
+                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#10b981] border border-[#0a0a0a] animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
                       </div>
                       <div className="flex-1 overflow-hidden">
-                        <div className="truncate text-sm font-bold flex items-center gap-2">
+                        <div className="truncate text-xs font-bold flex items-center gap-1.5 text-white">
                           {peer.alias}
                           {unreadMessages[peer.id] > 0 && (
                             <span className="bg-[#10b981] text-black text-[9px] px-1.5 py-0.5 rounded-full font-bold">
@@ -75,7 +122,7 @@ export default function CommSidebar({ localPeer, peers, activeChat, callHistory,
                             </span>
                           )}
                         </div>
-                        <div className="text-[9px] text-[#10b981] uppercase tracking-widest font-bold">Online</div>
+                        <div className="text-[9px] text-[#10b981] uppercase tracking-widest font-mono">Node Active</div>
                       </div>
                     </button>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -97,29 +144,22 @@ export default function CommSidebar({ localPeer, peers, activeChat, callHistory,
               <Clock size={14} /> Call_Logs
             </div>
             {callHistory.length === 0 ? (
-              <div className="text-xs opacity-50 italic">No transmission history.</div>
+              <div className="text-xs opacity-50 italic p-3 text-center">No transmission history.</div>
             ) : (
-              callHistory.map(log => (
-                <div key={log.id} className="flex items-center justify-between p-2 border border-[#1a1a1a] mb-1 bg-[#050505]">
-                  <div className="flex items-center gap-3">
-                    {log.type === 'incoming' && <ArrowDownLeft size={16} className="text-[#10b981]" />}
-                    {log.type === 'outgoing' && <ArrowUpRight size={16} className="text-[#00ffff]" />}
-                    {log.type === 'missed' && <XCircle size={16} className="text-[#ff003c]" />}
-                    <div>
-                      <div className="text-sm font-bold">{log.peerAlias}</div>
-                      <div className="text-[10px] opacity-50">{new Date(log.timestamp).toLocaleString()}</div>
-                    </div>
+              callHistory.map(entry => (
+                <div key={entry.id} className="p-2 border-b border-[#1a1a1a] flex items-center justify-between text-xs">
+                  <div>
+                    <div className="font-bold text-white">{entry.peerAlias}</div>
+                    <div className="text-[9px] opacity-50 font-mono">{new Date(entry.timestamp).toLocaleTimeString()}</div>
                   </div>
+                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-zinc-900 border border-white/5 text-zinc-400">
+                    {entry.type}
+                  </span>
                 </div>
               ))
             )}
           </div>
         )}
-      </div>
-
-      <div className="p-3 border-t border-[#1a1a1a] text-[10px] opacity-40 font-mono flex justify-between">
-        <span>MONIX-OS v.1</span>
-        <span>P2P_ACTIVE</span>
       </div>
     </div>
   );

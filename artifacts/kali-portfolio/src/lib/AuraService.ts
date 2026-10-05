@@ -10,6 +10,8 @@ export interface AuraMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
+  modelBadge?: string;
+  latencyMs?: number;
 }
 
 export interface AuraServiceCallbacks {
@@ -593,7 +595,7 @@ export function createAuraService(cb: AuraServiceCallbacks): AuraServiceHandle {
       }
     };
 
-    rec.onresult = (event: SpeechRecognitionEvent) => {
+    rec.onresult = (event: any) => {
       if (cb.isMuted()) return;
 
       for (let i = event.resultIndex; i < event.results.length; i++) {

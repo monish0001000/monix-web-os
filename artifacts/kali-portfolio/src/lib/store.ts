@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { type VFSNode, scanStorage } from "./vfsUtils";
+import { type VFSNode, scanStorage, saveUserVFSNodes, getUserVFSNodes } from "./vfsUtils";
 import { createAuraService, type AuraServiceHandle, type AuraMessage } from "./AuraService";
 
 export type { AuraMessage };
@@ -56,6 +56,10 @@ interface OSState {
 
   localFileSystem: VFSNode[];
   preloadLocalFS: () => void;
+  addVFSNode: (node: VFSNode) => void;
+  removeVFSNode: (id: string) => void;
+  renameVFSNode: (id: string, newName: string) => void;
+  setLocalFileSystem: (nodes: VFSNode[]) => void;
 
   // Window focus tracking
   focusedWindowId: string;
@@ -123,6 +127,48 @@ export const useOSStore = create<OSState>((set, get) => ({
 
   localFileSystem: [],
   preloadLocalFS: () => set({ localFileSystem: scanStorage() }),
+
+  addVFSNode: (node: VFSNode) =>
+    set((state) => {
+      const updated = [...state.localFileSystem.filter((n) => n.id !== node.id), node];
+      const userNodes = getUserVFSNodes().filter((n) => n.id !== node.id);
+      saveUserVFSNodes([...userNodes, { ...node, isUserCreated: true }]);
+      return { localFileSystem: updated };
+    }),
+
+  removeVFSNode: (id: string) =>
+    set((state) => {
+      // Remove node and all descendants
+      const toRemove = new Set<string>([id]);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const n of state.localFileSystem) {
+          if (toRemove.has(n.parentId) && !toRemove.has(n.id)) {
+            toRemove.add(n.id);
+            changed = true;
+          }
+        }
+      }
+      const updated = state.localFileSystem.filter((n) => !toRemove.has(n.id));
+      const userNodes = getUserVFSNodes().filter((n) => !toRemove.has(n.id));
+      saveUserVFSNodes(userNodes);
+      return { localFileSystem: updated };
+    }),
+
+  renameVFSNode: (id: string, newName: string) =>
+    set((state) => {
+      const updated = state.localFileSystem.map((n) =>
+        n.id === id ? { ...n, name: newName } : n
+      );
+      const userNodes = getUserVFSNodes().map((n) =>
+        n.id === id ? { ...n, name: newName } : n
+      );
+      saveUserVFSNodes(userNodes);
+      return { localFileSystem: updated };
+    }),
+
+  setLocalFileSystem: (nodes: VFSNode[]) => set({ localFileSystem: nodes }),
 
   focusedWindowId: "",
   highestZIndex: 20,

@@ -486,7 +486,7 @@ export default function Terminal({
           });
           entries.push({
             delay: 5 * 800 + 20,
-            line: { type: "output" as LineType, content: "" },
+            line: { type: "output" as LineType, content: "", color: "dim" },
           });
           scheduleLines(entries);
           break;

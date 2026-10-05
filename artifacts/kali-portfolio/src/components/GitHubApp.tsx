@@ -29,7 +29,7 @@ export default function GitHubApp({
       onFocus={onFocus}
       initialX={initialX}
       initialY={initialY}
-      width={680}
+      width={840}
       height={560}
       zIndex={zIndex}
     >

@@ -1,10 +1,12 @@
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  TerminalSquare, FolderOpen, Monitor, Github, Trash2,
-  Lock, Settings, Power, Search, Globe, Shield, Sparkles,
-  FlaskConical, Code2, PenTool, Crown, Activity, Cpu, Map, FileCode, Phone, FileWarning
+  Lock, Power, Search, X, Shield, User,
 } from "lucide-react";
 import { useOSStore } from "@/lib/store";
+import CyberAppIcon, { getCyberAppTheme } from "./CyberAppIcon";
+import { playClickSound } from "@/utils/SoundEngine";
+import homeLauncherLogo from "@/assets/home-launcher.png";
 
 interface StartMenuProps {
   open: boolean;
@@ -12,115 +14,56 @@ interface StartMenuProps {
   onOpenWindow: (id: string) => void;
 }
 
-const SYSTEM_TOOLS = [
-  {
-    id: "settings",
-    label: "Settings",
-    icon: <Settings size={22} strokeWidth={1.6} />,
-    color: "#00d4ff",
-    bg: "rgba(0,212,255,0.08)",
-  },
-];
+interface AppEntry {
+  id: string;
+  label: string;
+  category: "security" | "dev" | "system" | "intel";
+  desc: string;
+}
 
-const GAMES = [
-  {
-    id: "chess",
-    label: "Grandmaster",
-    icon: <Crown size={22} strokeWidth={1.6} />,
-    color: "#ffd700",
-    bg: "rgba(255,215,0,0.1)",
-  },
-];
+const APPS: AppEntry[] = [
+  { id: "terminal",        label: "Terminal",     category: "security", desc: "Root Zsh / Bash Shell" },
+  { id: "browser",         label: "NetRunner",    category: "dev",      desc: "Cyber Web Browser" },
+  { id: "files",           label: "VFS Vault",    category: "system",   desc: "Supabase Cloud Storage" },
+  { id: "redteam",         label: "Red Team",     category: "security", desc: "Security Awareness Simulator" },
+  { id: "sentinel",        label: "Sentinel SOC", category: "security", desc: "SIEM & Threat Defense" },
+  { id: "aura",            label: "AURA AI",      category: "system",   desc: "Neural Voice Assistant" },
+  
+  { id: "codestudio",      label: "Code Studio",  category: "dev",      desc: "Full Cloud IDE" },
+  { id: "codepad",         label: "NanoPad",      category: "dev",      desc: "Scratchpad Editor" },
+  { id: "github",          label: "GitHub",       category: "dev",      desc: "Git Repositories" },
+  { id: "threatmap",       label: "Threat Map",   category: "security", desc: "Global Cyber Attacks" },
+  { id: "cykrypt",         label: "CYKRYPT",      category: "security", desc: "CTF Security Arena" },
+  { id: "threatmodeler",   label: "Threat Model", category: "security", desc: "STRIDE Analysis Engine" },
 
-const APPS = [
-  {
-    id: "terminal",
-    label: "Terminal",
-    icon: <TerminalSquare size={22} strokeWidth={1.6} />,
-    color: "#c8e6c9",
-    bg: "rgba(200,230,201,0.1)",
-  },
-  {
-    id: "files",
-    label: "Files",
-    icon: <FolderOpen size={22} strokeWidth={1.6} />,
-    color: "#90bfff",
-    bg: "rgba(144,191,255,0.1)",
-  },
-  {
-    id: "github",
-    label: "GitHub",
-    icon: <Github size={22} strokeWidth={1.6} />,
-    color: "#e0e0e0",
-    bg: "rgba(224,224,224,0.1)",
-  },
-  {
-    id: "portfolio",
-    label: "Portfolio",
-    icon: <Monitor size={22} strokeWidth={1.6} />,
-    color: "#90d090",
-    bg: "rgba(144,208,144,0.1)",
-  },
-  {
-    id: "trash",
-    label: "Trash",
-    icon: <Trash2 size={22} strokeWidth={1.6} />,
-    color: "#aaaacc",
-    bg: "rgba(170,170,204,0.1)",
-  },
-  {
-    id: "browser",
-    label: "Browser",
-    icon: <Globe size={22} strokeWidth={1.6} />,
-    color: "#7ec8e3",
-    bg: "rgba(126,200,227,0.1)",
-  },
-  {
-    id: "sentinel",
-    label: "Sentinel SOC",
-    icon: <Shield size={22} strokeWidth={1.6} />,
-    color: "#00c4ff",
-    bg: "rgba(0,163,255,0.1)",
-  },
-  {
-    id: "aura",
-    label: "AURA AI",
-    icon: <Sparkles size={22} strokeWidth={1.6} />,
-    color: "#c084fc",
-    bg: "rgba(168,85,247,0.1)",
-  },
-  {
-    id: "threatmap",
-    label: "Threat Map",
-    icon: <Map size={22} strokeWidth={1.6} />,
-    color: "#ff6060",
-    bg: "rgba(255,96,96,0.1)",
-  },
-  {
-    id: "codepad",
-    label: "CodePad",
-    icon: <FileCode size={22} strokeWidth={1.6} />,
-    color: "#00c4ff",
-    bg: "rgba(0,196,255,0.1)",
-  },
-  {
-    id: "securecomm",
-    label: "MONIX-COMM",
-    icon: <Phone size={22} strokeWidth={1.6} />,
-    color: "#00ffff",
-    bg: "rgba(0,255,255,0.08)",
-  },
-  {
-    id: "dossier",
-    label: "Classified Dossier",
-    icon: <FileWarning size={22} strokeWidth={1.6} />,
-    color: "#ff4444",
-    bg: "rgba(255,68,68,0.08)",
-  },
+  { id: "cyberchef",       label: "CyberChef",    category: "security", desc: "Crypto & Encodings Forge" },
+  { id: "dossier",         label: "Dossier",      category: "intel",    desc: "Classified Intel File" },
+  { id: "securecomm",      label: "MONIX-COMM",   category: "intel",    desc: "Encrypted Comms" },
+  { id: "portfolio",       label: "Credentials",  category: "dev",      desc: "Operative Dossier" },
+  { id: "taskmanager",     label: "Telemetry",    category: "system",   desc: "Kernel Monitor & CPU" },
+  { id: "settings",        label: "Settings",     category: "system",   desc: "System Overdrive" },
+
+  { id: "wallpaperpicker", label: "Wallpapers",   category: "system",   desc: "Cyber Wallpapers" },
+  { id: "trash",           label: "Trash Bin",    category: "system",   desc: "Quarantine Bin" },
+  { id: "chess",           label: "Chess",        category: "intel",    desc: "Grandmaster AI Chess" },
 ];
 
 export default function StartMenu({ open, onClose, onOpenWindow }: StartMenuProps) {
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState<"all" | "security" | "dev" | "system" | "intel">("all");
   const setLocked = useOSStore((s) => s.setLocked);
+
+  const filteredApps = useMemo(() => {
+    return APPS.filter((app) => {
+      const matchesSearch =
+        app.label.toLowerCase().includes(search.toLowerCase()) ||
+        app.desc.toLowerCase().includes(search.toLowerCase()) ||
+        app.id.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory =
+        activeCategory === "all" || app.category === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [search, activeCategory]);
 
   return (
     <AnimatePresence>
@@ -133,238 +76,404 @@ export default function StartMenu({ open, onClose, onOpenWindow }: StartMenuProp
             onClick={onClose}
           />
 
-          {/* Menu panel */}
+          {/* Windows-style Redesigned Menu Panel (Zero Scrollbars, Clean Grid Layout) */}
           <motion.div
-            initial={{ opacity: 0, y: 12, scale: 0.97 }}
+            initial={{ opacity: 0, y: 16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.96 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="fixed font-sans"
+            exit={{ opacity: 0, y: 12, scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            className="fixed font-sans select-none"
             style={{
-              bottom: 52,
-              left: 8,
-              width: 320,
+              bottom: 48,
+              left: 10,
+              width: 460,
+              maxWidth: "calc(100vw - 20px)",
               zIndex: 500,
-              background: "rgba(10, 10, 18, 0.92)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: 10,
-              boxShadow: "0 -12px 48px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04)",
+              background: "linear-gradient(180deg, rgba(10, 15, 26, 0.96) 0%, rgba(4, 7, 14, 0.98) 100%)",
+              backdropFilter: "blur(30px) saturate(180%)",
+              WebkitBackdropFilter: "blur(30px) saturate(180%)",
+              border: "1px solid rgba(0, 240, 255, 0.3)",
+              borderRadius: 14,
+              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(0, 240, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
             }}
           >
-            {/* Header */}
+            {/* ── Top Header: Windows Search Bar ── */}
             <div
               style={{
-                padding: "14px 16px 10px",
-                borderBottom: "1px solid rgba(255,255,255,0.07)",
+                padding: "16px 16px 12px",
+                borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
               }}
             >
-              {/* User row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              {/* Search Bar Input */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  background: "rgba(18, 25, 40, 0.8)",
+                  border: "1px solid rgba(0, 240, 255, 0.28)",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  boxShadow: "inset 0 1px 4px rgba(0, 0, 0, 0.6)",
+                  transition: "border-color 0.2s, box-shadow 0.2s",
+                }}
+              >
+                <Search size={15} color="#00f0ff" style={{ flexShrink: 0 }} />
+                <input
+                  type="text"
+                  placeholder="Type here to search apps, tools, commands..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  autoFocus
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "#ffffff",
+                    fontSize: 12.5,
+                    fontFamily: "'Segoe UI', 'Ubuntu', sans-serif",
+                    width: "100%",
+                  }}
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "rgba(255,255,255,0.5)",
+                      cursor: "pointer",
+                      padding: 2,
+                    }}
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+
+              {/* Sub-Header: Pinned Title & Clean Category Filter */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      letterSpacing: "0.06em",
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      fontFamily: "'Ubuntu', monospace",
+                    }}
+                  >
+                    Pinned Apps
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      padding: "1px 5px",
+                      borderRadius: 10,
+                      background: "rgba(0, 240, 255, 0.12)",
+                      border: "1px solid rgba(0, 240, 255, 0.3)",
+                      color: "#00f0ff",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {filteredApps.length}
+                  </span>
+                </div>
+
+                {/* Clean Category Filters */}
+                <div style={{ display: "flex", gap: 4 }}>
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "security", label: "Sec" },
+                    { id: "dev", label: "Dev" },
+                    { id: "intel", label: "Ops" },
+                    { id: "system", label: "Sys" },
+                  ].map((cat) => {
+                    const isCur = activeCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          playClickSound();
+                          setActiveCategory(cat.id as any);
+                        }}
+                        style={{
+                          padding: "2px 7px",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          borderRadius: 4,
+                          border: isCur ? "1px solid #00f0ff" : "1px solid rgba(255, 255, 255, 0.08)",
+                          background: isCur ? "rgba(0, 240, 255, 0.18)" : "rgba(255, 255, 255, 0.03)",
+                          color: isCur ? "#00f0ff" : "rgba(255, 255, 255, 0.5)",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {cat.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Applications Grid: Clean, Uncluttered, Zero Scrollbars ── */}
+            <div
+              style={{
+                padding: "12px 14px",
+                overflow: "hidden", // Completely remove scrollbar
+              }}
+            >
+              {filteredApps.length === 0 ? (
                 <div
                   style={{
-                    width: 34, height: 34, borderRadius: "50%",
-                    background: "linear-gradient(135deg, #1e3a6e 0%, #367BF0 100%)",
-                    border: "2px solid rgba(255,255,255,0.15)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0,
+                    padding: "36px 0",
+                    textAlign: "center",
+                    color: "rgba(0, 240, 255, 0.5)",
+                    fontSize: 12,
+                    fontFamily: "monospace",
                   }}
                 >
-                  <svg viewBox="0 0 48 48" width="20" height="20" fill="none">
-                    <circle cx="24" cy="18" r="9" fill="rgba(255,255,255,0.9)" />
-                    <path d="M6 42c0-9.94 8.06-18 18-18s18 8.06 18 18" stroke="rgba(255,255,255,0.85)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-                  </svg>
+                  No applications found matching &quot;{search}&quot;
                 </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.95)" }}>monish</div>
-                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>MONIX OS · Rolling</div>
-                </div>
-              </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(6, 1fr)",
+                    gap: "10px 4px",
+                  }}
+                >
+                  {filteredApps.map((app) => {
+                    const theme = getCyberAppTheme(app.id);
+                    return (
+                      <motion.button
+                        key={app.id}
+                        whileHover={{ scale: 1.08, y: -2 }}
+                        whileTap={{ scale: 0.94 }}
+                        onClick={() => {
+                          playClickSound();
+                          onOpenWindow(app.id);
+                          onClose();
+                        }}
+                        title={`${app.label} — ${app.desc}`}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: "7px 4px 6px",
+                          background: "transparent",
+                          border: "1px solid transparent",
+                          borderRadius: 8,
+                          cursor: "pointer",
+                          transition: "all 0.18s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "rgba(255, 255, 255, 0.07)";
+                          e.currentTarget.style.borderColor = `${theme.color}55`;
+                          e.currentTarget.style.boxShadow = `0 0 12px ${theme.color}25`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.borderColor = "transparent";
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
+                      >
+                        {/* High-Fidelity Cyber Vector Icon */}
+                        <div
+                          style={{
+                            width: 34,
+                            height: 34,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            transition: "filter 0.2s ease",
+                          }}
+                        >
+                          <CyberAppIcon appId={app.id} size={28} glow={false} />
+                        </div>
 
-              {/* Search */}
-              <div
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: 6, padding: "6px 10px",
-                }}
-              >
-                <Search size={13} color="rgba(255,255,255,0.4)" />
-                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontStyle: "italic" }}>
-                  Search applications…
-                </span>
-              </div>
+                        {/* Clean Single-Line Typography */}
+                        <span
+                          style={{
+                            marginTop: 5,
+                            fontSize: 10.5,
+                            fontWeight: 600,
+                            color: "#e2e8f0",
+                            maxWidth: 66,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            lineHeight: 1.15,
+                            textAlign: "center",
+                            letterSpacing: "0.01em",
+                          }}
+                        >
+                          {app.label}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Apps grid */}
-            <div style={{ padding: "12px 12px 4px", flex: 1, overflowY: "auto" }}>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8, paddingLeft: 4 }}>
-                Applications
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: 6,
-                }}
-              >
-                {APPS.map((app) => (
-                  <button
-                    key={app.id}
-                    onClick={() => { onOpenWindow(app.id); onClose(); }}
-                    style={{
-                      display: "flex", flexDirection: "column", alignItems: "center",
-                      gap: 6, padding: "12px 4px 10px",
-                      background: app.bg,
-                      border: "1px solid rgba(255,255,255,0.06)",
-                      borderRadius: 8, cursor: "pointer",
-                      transition: "background 0.15s, border-color 0.15s, transform 0.1s",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = app.bg.replace("0.1)", "0.18)");
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.14)";
-                      (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = app.bg;
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.06)";
-                      (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-                    }}
-                  >
-                    <div style={{ color: app.color }}>{app.icon}</div>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>
-                      {app.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Games section */}
-              <div style={{ fontSize: 10, color: "rgba(255,215,0,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", margin: "12px 0 8px", paddingLeft: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                <Crown size={10} color="rgba(255,215,0,0.5)" />
-                Games
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
-                {GAMES.map((app) => (
-                  <button
-                    key={app.id}
-                    onClick={() => { onOpenWindow(app.id); onClose(); }}
-                    style={{
-                      display: "flex", flexDirection: "column", alignItems: "center",
-                      gap: 6, padding: "12px 4px 10px",
-                      background: app.bg,
-                      border: "1px solid rgba(255,215,0,0.15)",
-                      borderRadius: 8, cursor: "pointer",
-                      transition: "background 0.15s, border-color 0.15s, transform 0.1s",
-                      boxShadow: "0 0 12px rgba(255,215,0,0.06)",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "rgba(255,215,0,0.18)";
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,215,0,0.35)";
-                      (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
-                      (e.currentTarget as HTMLElement).style.boxShadow = "0 0 16px rgba(255,215,0,0.2)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = app.bg;
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,215,0,0.15)";
-                      (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-                      (e.currentTarget as HTMLElement).style.boxShadow = "0 0 12px rgba(255,215,0,0.06)";
-                    }}
-                  >
-                    <div style={{ color: app.color, filter: "drop-shadow(0 0 6px rgba(255,215,0,0.5))" }}>{app.icon}</div>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>
-                      {app.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {/* System Tools section */}
-              <div style={{ fontSize: 10, color: "rgba(0,255,136,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", margin: "12px 0 8px", paddingLeft: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                <Activity size={10} color="rgba(0,255,136,0.5)" />
-                System Tools
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, paddingBottom: 8 }}>
-                {SYSTEM_TOOLS.map((app) => (
-                  <button
-                    key={app.id}
-                    onClick={() => { onOpenWindow(app.id); onClose(); }}
-                    style={{
-                      display: "flex", flexDirection: "column", alignItems: "center",
-                      gap: 6, padding: "12px 4px 10px",
-                      background: app.bg,
-                      border: "1px solid rgba(0,255,136,0.12)",
-                      borderRadius: 8, cursor: "pointer",
-                      transition: "background 0.15s, border-color 0.15s, transform 0.1s",
-                      boxShadow: "0 0 10px rgba(0,255,136,0.04)",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "rgba(0,255,136,0.16)";
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,255,136,0.3)";
-                      (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = app.bg;
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,255,136,0.12)";
-                      (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-                    }}
-                  >
-                    <div style={{ color: app.color, filter: "drop-shadow(0 0 5px rgba(0,255,136,0.4))" }}>{app.icon}</div>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>
-                      {app.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Footer actions */}
+            {/* ── Windows-Style Footer: User Profile & Power Actions ── */}
             <div
               style={{
-                padding: "8px 12px 12px",
-                borderTop: "1px solid rgba(255,255,255,0.07)",
-                display: "flex", gap: 6,
+                padding: "10px 16px",
+                borderTop: "1px solid rgba(0, 240, 255, 0.15)",
+                background: "rgba(5, 8, 16, 0.95)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
               }}
             >
-              <button
-                onClick={() => { setLocked(true); onClose(); }}
+              {/* User Profile */}
+              <div
                 style={{
-                  flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-                  gap: 7, padding: "8px 0",
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 6, cursor: "pointer",
-                  fontSize: 12, color: "rgba(255,255,255,0.7)",
-                  transition: "background 0.15s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  cursor: "default",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
               >
-                <Lock size={13} />
-                Lock Screen
-              </button>
-              <button
-                onClick={() => window.location.reload()}
-                style={{
-                  flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-                  gap: 7, padding: "8px 0",
-                  background: "rgba(239,68,68,0.08)",
-                  border: "1px solid rgba(239,68,68,0.2)",
-                  borderRadius: 6, cursor: "pointer",
-                  fontSize: 12, color: "rgba(239,100,100,0.9)",
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.16)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.08)"; }}
-              >
-                <Power size={13} />
-                Restart
-              </button>
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)",
+                    border: "1px solid rgba(0, 240, 255, 0.4)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                  }}
+                >
+                  <img
+                    src={homeLauncherLogo}
+                    alt="User"
+                    style={{ width: 16, height: 16, objectFit: "contain" }}
+                  />
+                  {/* Status Pip */}
+                  <span
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      right: 0,
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: "#00ff88",
+                      boxShadow: "0 0 6px #00ff88",
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      color: "#ffffff",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    monish
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: "rgba(0, 240, 255, 0.7)",
+                      fontFamily: "monospace",
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    root@kali ~ SOC Admin
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons: Lock & Reboot */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button
+                  onClick={() => {
+                    playClickSound();
+                    setLocked(true);
+                    onClose();
+                  }}
+                  title="Lock Workstation"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 7,
+                    background: "rgba(0, 240, 255, 0.08)",
+                    border: "1px solid rgba(0, 240, 255, 0.25)",
+                    color: "#00f0ff",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(0, 240, 255, 0.2)";
+                    e.currentTarget.style.boxShadow = "0 0 10px rgba(0, 240, 255, 0.35)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(0, 240, 255, 0.08)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  <Lock size={14} />
+                </button>
+
+                <button
+                  onClick={() => {
+                    playClickSound();
+                    window.location.reload();
+                  }}
+                  title="Reboot System"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 7,
+                    background: "rgba(239, 68, 68, 0.1)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    color: "#f87171",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)";
+                    e.currentTarget.style.boxShadow = "0 0 10px rgba(239, 68, 68, 0.4)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  <Power size={14} />
+                </button>
+              </div>
             </div>
           </motion.div>
         </>

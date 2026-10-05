@@ -22,6 +22,7 @@ import ThreatMapApp from "./ThreatMapApp";
 import CodePadApp from "./CodePadApp";
 import SecureCommApp from "./SecureCommApp";
 import DossierApp from "./DossierApp";
+import RedTeamApp from "./RedTeamApp";
 import RightClickMenu from "./RightClickMenu";
 import { playClickSound, playCloseSound } from "@/utils/SoundEngine";
 import MediaViewerApp, { type MediaType } from "./MediaViewerApp";
@@ -30,26 +31,27 @@ import AuraBall from "@/components/ui/AuraBall";
 
 // ── Process info registry ─────────────────────────────────────────────────────
 const PROCESS_INFO: Record<string, { name: string; icon: string }> = {
-  terminal:        { name: "Terminal",         icon: "⬛" },
-  files:           { name: "File Manager",     icon: "📁" },
-  trash:           { name: "Trash",            icon: "🗑️" },
-  github:          { name: "GitHub",           icon: "🐙" },
-  portfolio:       { name: "Portfolio",        icon: "🧑‍💻" },
-  browser:         { name: "Web Browser",      icon: "⬡" },
-  wallpaperpicker: { name: "Wallpaper Picker", icon: "🖼️" },
-  sentinel:        { name: "Sentinel SOC",     icon: "🛡️" },
-  aura:            { name: "AURA AI",          icon: "🤖" },
-  cyberchef:       { name: "CyberChef",        icon: "🍳" },
-  codestudio:      { name: "Code Studio",      icon: "💻" },
-  threatmodeler:   { name: "Threat Modeler",   icon: "🔐" },
-  chess:           { name: "Chess",            icon: "♟️" },
-  cykrypt:         { name: "CYKRYPT CTF",      icon: "🎯" },
-  taskmanager:     { name: "System Monitor",   icon: "📊" },
-  settings:        { name: "Settings",         icon: "⚙️" },
-  threatmap:       { name: "Threat Map",       icon: "🗺️" },
-  codepad:         { name: "CodePad",          icon: "📝" },
-  securecomm:      { name: "MONIX-COMM",       icon: "📞" },
-  dossier:         { name: "Classified Dossier", icon: "🗃️" },
+  redteam:         { name: "Red Team Simulator",icon: "redteam" },
+  terminal:        { name: "Root Terminal",     icon: "terminal" },
+  files:           { name: "VFS Vault",         icon: "files" },
+  trash:           { name: "Quarantine Trash",  icon: "trash" },
+  github:          { name: "GitHub Nexus",      icon: "github" },
+  portfolio:       { name: "Operative Dossier", icon: "portfolio" },
+  browser:         { name: "NetRunner Browser", icon: "browser" },
+  wallpaperpicker: { name: "Holo Wallpapers",   icon: "wallpaperpicker" },
+  sentinel:        { name: "Sentinel SOC",      icon: "sentinel" },
+  aura:            { name: "AURA Neural AI",    icon: "aura" },
+  cyberchef:       { name: "CyberChef Forge",   icon: "cyberchef" },
+  codestudio:      { name: "Code Studio",       icon: "codestudio" },
+  threatmodeler:   { name: "Threat Modeler",    icon: "threatmodeler" },
+  chess:           { name: "Grandmaster Chess", icon: "chess" },
+  cykrypt:         { name: "CYKRYPT Arena",     icon: "cykrypt" },
+  taskmanager:     { name: "Kernel Monitor",    icon: "taskmanager" },
+  settings:        { name: "Kernel Settings",   icon: "settings" },
+  threatmap:       { name: "Cyber Threat Map",  icon: "threatmap" },
+  codepad:         { name: "NanoPad Editor",    icon: "codepad" },
+  securecomm:      { name: "MONIX-COMM",        icon: "securecomm" },
+  dossier:         { name: "Classified Dossier",icon: "dossier" },
 };
 
 function genPID(): string {
@@ -64,6 +66,7 @@ export interface WindowEntry {
 }
 
 const WINDOW_LABELS: Record<string, string> = {
+  redteam:         "PhishGuard — Threat Simulator",
   terminal:        "Terminal",
   files:           "Files",
   trash:           "Trash",
@@ -194,9 +197,18 @@ export default function Desktop() {
     };
     window.addEventListener("aura-type-text", handleTypeText);
 
+    const handleOpenApp = (e: Event) => {
+      const appId = (e as CustomEvent<{ appId: string }>).detail?.appId;
+      if (appId) {
+        handleOpenWindowRef.current?.(appId);
+      }
+    };
+    window.addEventListener("monix-open-app", handleOpenApp);
+
     return () => {
       window.removeEventListener("aura-close-all", handleCloseAll);
       window.removeEventListener("aura-type-text", handleTypeText);
+      window.removeEventListener("monix-open-app", handleOpenApp);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -474,282 +486,340 @@ export default function Desktop() {
       {/* App windows — separate layer above icons, never interferes with icon flex layout */}
       <div style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none" }}>
       <AnimatePresence>
-        {getWin("terminal") && !getWin("terminal")!.minimized && (
-          <Terminal
-            key="terminal"
-            onClose={() => handleCloseWindow("terminal")}
-            onMinimize={() => handleMinimizeWindow("terminal")}
-            isActive={activeWindow === "terminal"}
-            onFocus={() => bringToFront("terminal")}
-            initialX={getInitialPosition("terminal").x}
-            initialY={getInitialPosition("terminal").y}
-            zIndex={getWin("terminal")!.zIndex}
-            onOpenWindow={handleOpenWindow}
-          />
+        {getWin("redteam") && (
+          <div key="win-redteam" style={{ display: getWin("redteam")!.minimized ? "none" : "contents" }}>
+            <RedTeamApp
+              key="redteam"
+              onClose={() => handleCloseWindow("redteam")}
+              onMinimize={() => handleMinimizeWindow("redteam")}
+              isActive={activeWindow === "redteam"}
+              onFocus={() => bringToFront("redteam")}
+              initialX={getInitialPosition("redteam").x}
+              initialY={getInitialPosition("redteam").y}
+              zIndex={getWin("redteam")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("files") && !getWin("files")!.minimized && (
-          <FileExplorer
-            key="files"
-            onClose={() => handleCloseWindow("files")}
-            onMinimize={() => handleMinimizeWindow("files")}
-            isActive={activeWindow === "files"}
-            onFocus={() => bringToFront("files")}
-            initialX={getInitialPosition("files").x}
-            initialY={getInitialPosition("files").y}
-            zIndex={getWin("files")!.zIndex}
-            onOpenMediaViewer={handleOpenMediaViewer}
-          />
+        {getWin("terminal") && (
+          <div key="win-terminal" style={{ display: getWin("terminal")!.minimized ? "none" : "contents" }}>
+            <Terminal
+              key="terminal"
+              onClose={() => handleCloseWindow("terminal")}
+              onMinimize={() => handleMinimizeWindow("terminal")}
+              isActive={activeWindow === "terminal"}
+              onFocus={() => bringToFront("terminal")}
+              initialX={getInitialPosition("terminal").x}
+              initialY={getInitialPosition("terminal").y}
+              zIndex={getWin("terminal")!.zIndex}
+              onOpenWindow={handleOpenWindow}
+            />
+          </div>
         )}
 
-        {getWin("trash") && !getWin("trash")!.minimized && (
-          <Trash
-            key="trash"
-            onClose={() => handleCloseWindow("trash")}
-            onMinimize={() => handleMinimizeWindow("trash")}
-            isActive={activeWindow === "trash"}
-            onFocus={() => bringToFront("trash")}
-            initialX={getInitialPosition("trash").x}
-            initialY={getInitialPosition("trash").y}
-            zIndex={getWin("trash")!.zIndex}
-          />
+        {getWin("files") && (
+          <div key="win-files" style={{ display: getWin("files")!.minimized ? "none" : "contents" }}>
+            <FileExplorer
+              key="files"
+              onClose={() => handleCloseWindow("files")}
+              onMinimize={() => handleMinimizeWindow("files")}
+              isActive={activeWindow === "files"}
+              onFocus={() => bringToFront("files")}
+              initialX={getInitialPosition("files").x}
+              initialY={getInitialPosition("files").y}
+              zIndex={getWin("files")!.zIndex}
+              onOpenMediaViewer={handleOpenMediaViewer}
+            />
+          </div>
         )}
 
-        {getWin("github") && !getWin("github")!.minimized && (
-          <GitHubApp
-            key="github"
-            onClose={() => handleCloseWindow("github")}
-            onMinimize={() => handleMinimizeWindow("github")}
-            isActive={activeWindow === "github"}
-            onFocus={() => bringToFront("github")}
-            initialX={getInitialPosition("github").x}
-            initialY={getInitialPosition("github").y}
-            zIndex={getWin("github")!.zIndex}
-          />
+        {getWin("trash") && (
+          <div key="win-trash" style={{ display: getWin("trash")!.minimized ? "none" : "contents" }}>
+            <Trash
+              key="trash"
+              onClose={() => handleCloseWindow("trash")}
+              onMinimize={() => handleMinimizeWindow("trash")}
+              isActive={activeWindow === "trash"}
+              onFocus={() => bringToFront("trash")}
+              initialX={getInitialPosition("trash").x}
+              initialY={getInitialPosition("trash").y}
+              zIndex={getWin("trash")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("portfolio") && !getWin("portfolio")!.minimized && (
-          <PortfolioApp
-            key="portfolio"
-            onClose={() => handleCloseWindow("portfolio")}
-            onMinimize={() => handleMinimizeWindow("portfolio")}
-            isActive={activeWindow === "portfolio"}
-            onFocus={() => bringToFront("portfolio")}
-            initialX={getInitialPosition("portfolio").x}
-            initialY={getInitialPosition("portfolio").y}
-            zIndex={getWin("portfolio")!.zIndex}
-          />
+        {getWin("github") && (
+          <div key="win-github" style={{ display: getWin("github")!.minimized ? "none" : "contents" }}>
+            <GitHubApp
+              key="github"
+              onClose={() => handleCloseWindow("github")}
+              onMinimize={() => handleMinimizeWindow("github")}
+              isActive={activeWindow === "github"}
+              onFocus={() => bringToFront("github")}
+              initialX={getInitialPosition("github").x}
+              initialY={getInitialPosition("github").y}
+              zIndex={getWin("github")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("browser") && !getWin("browser")!.minimized && (
-          <BrowserApp
-            key="browser"
-            onClose={() => handleCloseWindow("browser")}
-            onMinimize={() => handleMinimizeWindow("browser")}
-            isActive={activeWindow === "browser"}
-            onFocus={() => bringToFront("browser")}
-            initialX={getInitialPosition("browser").x}
-            initialY={getInitialPosition("browser").y}
-            zIndex={getWin("browser")!.zIndex}
-          />
+        {getWin("portfolio") && (
+          <div key="win-portfolio" style={{ display: getWin("portfolio")!.minimized ? "none" : "contents" }}>
+            <PortfolioApp
+              key="portfolio"
+              onClose={() => handleCloseWindow("portfolio")}
+              onMinimize={() => handleMinimizeWindow("portfolio")}
+              isActive={activeWindow === "portfolio"}
+              onFocus={() => bringToFront("portfolio")}
+              initialX={getInitialPosition("portfolio").x}
+              initialY={getInitialPosition("portfolio").y}
+              zIndex={getWin("portfolio")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("wallpaperpicker") && !getWin("wallpaperpicker")!.minimized && (
-          <WallpaperPicker
-            key="wallpaperpicker"
-            onClose={() => handleCloseWindow("wallpaperpicker")}
-            isActive={activeWindow === "wallpaperpicker"}
-            onFocus={() => bringToFront("wallpaperpicker")}
-            initialX={getInitialPosition("wallpaperpicker").x}
-            initialY={getInitialPosition("wallpaperpicker").y}
-            zIndex={getWin("wallpaperpicker")!.zIndex}
-          />
+        {getWin("browser") && (
+          <div key="win-browser" style={{ display: getWin("browser")!.minimized ? "none" : "contents" }}>
+            <BrowserApp
+              key="browser"
+              onClose={() => handleCloseWindow("browser")}
+              onMinimize={() => handleMinimizeWindow("browser")}
+              isActive={activeWindow === "browser"}
+              onFocus={() => bringToFront("browser")}
+              initialX={getInitialPosition("browser").x}
+              initialY={getInitialPosition("browser").y}
+              zIndex={getWin("browser")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("aura") && !getWin("aura")!.minimized && (
-          <AuraApp
-            key="aura"
-            onClose={() => handleCloseWindow("aura")}
-            onMinimize={() => handleMinimizeWindow("aura")}
-            isActive={activeWindow === "aura"}
-            onFocus={() => bringToFront("aura")}
-            initialX={getInitialPosition("aura").x}
-            initialY={getInitialPosition("aura").y}
-            zIndex={getWin("aura")!.zIndex}
-            onOpenWindow={handleOpenWindow}
-          />
+        {getWin("wallpaperpicker") && (
+          <div key="win-wallpaperpicker" style={{ display: getWin("wallpaperpicker")!.minimized ? "none" : "contents" }}>
+            <WallpaperPicker
+              key="wallpaperpicker"
+              onClose={() => handleCloseWindow("wallpaperpicker")}
+              isActive={activeWindow === "wallpaperpicker"}
+              onFocus={() => bringToFront("wallpaperpicker")}
+              initialX={getInitialPosition("wallpaperpicker").x}
+              initialY={getInitialPosition("wallpaperpicker").y}
+              zIndex={getWin("wallpaperpicker")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("sentinel") && !getWin("sentinel")!.minimized && (
-          <SentinelApp
-            key="sentinel"
-            onClose={() => handleCloseWindow("sentinel")}
-            onMinimize={() => handleMinimizeWindow("sentinel")}
-            isActive={activeWindow === "sentinel"}
-            onFocus={() => bringToFront("sentinel")}
-            initialX={getInitialPosition("sentinel").x}
-            initialY={getInitialPosition("sentinel").y}
-            zIndex={getWin("sentinel")!.zIndex}
-          />
+        {getWin("aura") && (
+          <div key="win-aura" style={{ display: getWin("aura")!.minimized ? "none" : "contents" }}>
+            <AuraApp
+              key="aura"
+              onClose={() => handleCloseWindow("aura")}
+              onMinimize={() => handleMinimizeWindow("aura")}
+              isActive={activeWindow === "aura"}
+              onFocus={() => bringToFront("aura")}
+              initialX={getInitialPosition("aura").x}
+              initialY={getInitialPosition("aura").y}
+              zIndex={getWin("aura")!.zIndex}
+              onOpenWindow={handleOpenWindow}
+            />
+          </div>
         )}
 
-        {getWin("cyberchef") && !getWin("cyberchef")!.minimized && (
-          <CyberChefApp
-            key="cyberchef"
-            onClose={() => handleCloseWindow("cyberchef")}
-            onMinimize={() => handleMinimizeWindow("cyberchef")}
-            isActive={activeWindow === "cyberchef"}
-            onFocus={() => bringToFront("cyberchef")}
-            initialX={getInitialPosition("cyberchef").x}
-            initialY={getInitialPosition("cyberchef").y}
-            zIndex={getWin("cyberchef")!.zIndex}
-          />
+        {getWin("sentinel") && (
+          <div key="win-sentinel" style={{ display: getWin("sentinel")!.minimized ? "none" : "contents" }}>
+            <SentinelApp
+              key="sentinel"
+              onClose={() => handleCloseWindow("sentinel")}
+              onMinimize={() => handleMinimizeWindow("sentinel")}
+              isActive={activeWindow === "sentinel"}
+              onFocus={() => bringToFront("sentinel")}
+              initialX={getInitialPosition("sentinel").x}
+              initialY={getInitialPosition("sentinel").y}
+              zIndex={getWin("sentinel")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("codestudio") && !getWin("codestudio")!.minimized && (
-          <CodeStudioApp
-            key="codestudio"
-            onClose={() => handleCloseWindow("codestudio")}
-            onMinimize={() => handleMinimizeWindow("codestudio")}
-            isActive={activeWindow === "codestudio"}
-            onFocus={() => bringToFront("codestudio")}
-            initialX={getInitialPosition("codestudio").x}
-            initialY={getInitialPosition("codestudio").y}
-            zIndex={getWin("codestudio")!.zIndex}
-          />
+        {getWin("cyberchef") && (
+          <div key="win-cyberchef" style={{ display: getWin("cyberchef")!.minimized ? "none" : "contents" }}>
+            <CyberChefApp
+              key="cyberchef"
+              onClose={() => handleCloseWindow("cyberchef")}
+              onMinimize={() => handleMinimizeWindow("cyberchef")}
+              isActive={activeWindow === "cyberchef"}
+              onFocus={() => bringToFront("cyberchef")}
+              initialX={getInitialPosition("cyberchef").x}
+              initialY={getInitialPosition("cyberchef").y}
+              zIndex={getWin("cyberchef")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("threatmodeler") && !getWin("threatmodeler")!.minimized && (
-          <ThreatModelerApp
-            key="threatmodeler"
-            onClose={() => handleCloseWindow("threatmodeler")}
-            onMinimize={() => handleMinimizeWindow("threatmodeler")}
-            isActive={activeWindow === "threatmodeler"}
-            onFocus={() => bringToFront("threatmodeler")}
-            initialX={getInitialPosition("threatmodeler").x}
-            initialY={getInitialPosition("threatmodeler").y}
-            zIndex={getWin("threatmodeler")!.zIndex}
-          />
+        {getWin("codestudio") && (
+          <div key="win-codestudio" style={{ display: getWin("codestudio")!.minimized ? "none" : "contents" }}>
+            <CodeStudioApp
+              key="codestudio"
+              onClose={() => handleCloseWindow("codestudio")}
+              onMinimize={() => handleMinimizeWindow("codestudio")}
+              isActive={activeWindow === "codestudio"}
+              onFocus={() => bringToFront("codestudio")}
+              initialX={getInitialPosition("codestudio").x}
+              initialY={getInitialPosition("codestudio").y}
+              zIndex={getWin("codestudio")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("chess") && !getWin("chess")!.minimized && (
-          <ChessApp
-            key="chess"
-            onClose={() => handleCloseWindow("chess")}
-            onMinimize={() => handleMinimizeWindow("chess")}
-            isActive={activeWindow === "chess"}
-            onFocus={() => bringToFront("chess")}
-            initialX={getInitialPosition("chess").x}
-            initialY={getInitialPosition("chess").y}
-            zIndex={getWin("chess")!.zIndex}
-          />
+        {getWin("threatmodeler") && (
+          <div key="win-threatmodeler" style={{ display: getWin("threatmodeler")!.minimized ? "none" : "contents" }}>
+            <ThreatModelerApp
+              key="threatmodeler"
+              onClose={() => handleCloseWindow("threatmodeler")}
+              onMinimize={() => handleMinimizeWindow("threatmodeler")}
+              isActive={activeWindow === "threatmodeler"}
+              onFocus={() => bringToFront("threatmodeler")}
+              initialX={getInitialPosition("threatmodeler").x}
+              initialY={getInitialPosition("threatmodeler").y}
+              zIndex={getWin("threatmodeler")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("cykrypt") && !getWin("cykrypt")!.minimized && (
-          <CykryptApp
-            key="cykrypt"
-            onClose={() => handleCloseWindow("cykrypt")}
-            onMinimize={() => handleMinimizeWindow("cykrypt")}
-            isActive={activeWindow === "cykrypt"}
-            onFocus={() => bringToFront("cykrypt")}
-            initialX={getInitialPosition("cykrypt").x}
-            initialY={getInitialPosition("cykrypt").y}
-            zIndex={getWin("cykrypt")!.zIndex}
-          />
+        {getWin("chess") && (
+          <div key="win-chess" style={{ display: getWin("chess")!.minimized ? "none" : "contents" }}>
+            <ChessApp
+              key="chess"
+              onClose={() => handleCloseWindow("chess")}
+              onMinimize={() => handleMinimizeWindow("chess")}
+              isActive={activeWindow === "chess"}
+              onFocus={() => bringToFront("chess")}
+              initialX={getInitialPosition("chess").x}
+              initialY={getInitialPosition("chess").y}
+              zIndex={getWin("chess")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("taskmanager") && !getWin("taskmanager")!.minimized && (
-          <TaskManagerApp
-            key="taskmanager"
-            onClose={() => handleCloseWindow("taskmanager")}
-            onMinimize={() => handleMinimizeWindow("taskmanager")}
-            isActive={activeWindow === "taskmanager"}
-            onFocus={() => bringToFront("taskmanager")}
-            initialX={getInitialPosition("taskmanager").x}
-            initialY={getInitialPosition("taskmanager").y}
-            zIndex={getWin("taskmanager")!.zIndex}
-          />
-        )}
-        {getWin("settings") && !getWin("settings")!.minimized && (
-          <SettingsApp
-            key="settings"
-            onClose={() => handleCloseWindow("settings")}
-            onMinimize={() => handleMinimizeWindow("settings")}
-            isActive={activeWindow === "settings"}
-            onFocus={() => bringToFront("settings")}
-            initialX={getInitialPosition("settings").x}
-            initialY={getInitialPosition("settings").y}
-            zIndex={getWin("settings")!.zIndex}
-            onOpenTaskManager={() => handleOpenWindow("taskmanager")}
-          />
+        {getWin("cykrypt") && (
+          <div key="win-cykrypt" style={{ display: getWin("cykrypt")!.minimized ? "none" : "contents" }}>
+            <CykryptApp
+              key="cykrypt"
+              onClose={() => handleCloseWindow("cykrypt")}
+              onMinimize={() => handleMinimizeWindow("cykrypt")}
+              isActive={activeWindow === "cykrypt"}
+              onFocus={() => bringToFront("cykrypt")}
+              initialX={getInitialPosition("cykrypt").x}
+              initialY={getInitialPosition("cykrypt").y}
+              zIndex={getWin("cykrypt")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("threatmap") && !getWin("threatmap")!.minimized && (
-          <ThreatMapApp
-            key="threatmap"
-            onClose={() => handleCloseWindow("threatmap")}
-            onMinimize={() => handleMinimizeWindow("threatmap")}
-            isActive={activeWindow === "threatmap"}
-            onFocus={() => bringToFront("threatmap")}
-            initialX={getInitialPosition("threatmap").x}
-            initialY={getInitialPosition("threatmap").y}
-            zIndex={getWin("threatmap")!.zIndex}
-          />
+        {getWin("taskmanager") && (
+          <div key="win-taskmanager" style={{ display: getWin("taskmanager")!.minimized ? "none" : "contents" }}>
+            <TaskManagerApp
+              key="taskmanager"
+              onClose={() => handleCloseWindow("taskmanager")}
+              onMinimize={() => handleMinimizeWindow("taskmanager")}
+              isActive={activeWindow === "taskmanager"}
+              onFocus={() => bringToFront("taskmanager")}
+              initialX={getInitialPosition("taskmanager").x}
+              initialY={getInitialPosition("taskmanager").y}
+              zIndex={getWin("taskmanager")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("codepad") && !getWin("codepad")!.minimized && (
-          <CodePadApp
-            key="codepad"
-            onClose={() => handleCloseWindow("codepad")}
-            onMinimize={() => handleMinimizeWindow("codepad")}
-            isActive={activeWindow === "codepad"}
-            onFocus={() => bringToFront("codepad")}
-            initialX={getInitialPosition("codepad").x}
-            initialY={getInitialPosition("codepad").y}
-            zIndex={getWin("codepad")!.zIndex}
-          />
+        {getWin("settings") && (
+          <div key="win-settings" style={{ display: getWin("settings")!.minimized ? "none" : "contents" }}>
+            <SettingsApp
+              key="settings"
+              onClose={() => handleCloseWindow("settings")}
+              onMinimize={() => handleMinimizeWindow("settings")}
+              isActive={activeWindow === "settings"}
+              onFocus={() => bringToFront("settings")}
+              initialX={getInitialPosition("settings").x}
+              initialY={getInitialPosition("settings").y}
+              zIndex={getWin("settings")!.zIndex}
+              onOpenTaskManager={() => handleOpenWindow("taskmanager")}
+            />
+          </div>
         )}
 
-        {getWin("securecomm") && !getWin("securecomm")!.minimized && (
-          <SecureCommApp
-            key="securecomm"
-            onClose={() => handleCloseWindow("securecomm")}
-            onMinimize={() => handleMinimizeWindow("securecomm")}
-            isActive={activeWindow === "securecomm"}
-            onFocus={() => bringToFront("securecomm")}
-            initialX={getInitialPosition("securecomm").x}
-            initialY={getInitialPosition("securecomm").y}
-            zIndex={getWin("securecomm")!.zIndex}
-          />
+        {getWin("threatmap") && (
+          <div key="win-threatmap" style={{ display: getWin("threatmap")!.minimized ? "none" : "contents" }}>
+            <ThreatMapApp
+              key="threatmap"
+              onClose={() => handleCloseWindow("threatmap")}
+              onMinimize={() => handleMinimizeWindow("threatmap")}
+              isActive={activeWindow === "threatmap"}
+              onFocus={() => bringToFront("threatmap")}
+              initialX={getInitialPosition("threatmap").x}
+              initialY={getInitialPosition("threatmap").y}
+              zIndex={getWin("threatmap")!.zIndex}
+            />
+          </div>
         )}
 
-        {getWin("dossier") && !getWin("dossier")!.minimized && (
-          <DossierApp
-            key="dossier"
-            onClose={() => handleCloseWindow("dossier")}
-            onMinimize={() => handleMinimizeWindow("dossier")}
-            isActive={activeWindow === "dossier"}
-            onFocus={() => bringToFront("dossier")}
-            initialX={getInitialPosition("dossier").x}
-            initialY={getInitialPosition("dossier").y}
-            zIndex={getWin("dossier")!.zIndex}
-          />
+        {getWin("codepad") && (
+          <div key="win-codepad" style={{ display: getWin("codepad")!.minimized ? "none" : "contents" }}>
+            <CodePadApp
+              key="codepad"
+              onClose={() => handleCloseWindow("codepad")}
+              onMinimize={() => handleMinimizeWindow("codepad")}
+              isActive={activeWindow === "codepad"}
+              onFocus={() => bringToFront("codepad")}
+              initialX={getInitialPosition("codepad").x}
+              initialY={getInitialPosition("codepad").y}
+              zIndex={getWin("codepad")!.zIndex}
+            />
+          </div>
         )}
 
-        {windows.filter(w => w.id.startsWith("mediaviewer-") && !w.minimized).map((win) => (
-          <MediaViewerApp
-            key={win.id}
-            onClose={() => handleCloseWindow(win.id)}
-            onMinimize={() => handleMinimizeWindow(win.id)}
-            isActive={activeWindow === win.id}
-            onFocus={() => bringToFront(win.id)}
-            initialX={getInitialPosition("mediaviewer").x}
-            initialY={getInitialPosition("mediaviewer").y}
-            zIndex={win.zIndex}
-            fileName={win.props?.fileName ?? ""}
-            fileUrl={win.props?.fileUrl ?? ""}
-            fileType={(win.props?.fileType ?? "unknown") as MediaType}
-          />
+        {getWin("securecomm") && (
+          <div key="win-securecomm" style={{ display: getWin("securecomm")!.minimized ? "none" : "contents" }}>
+            <SecureCommApp
+              key="securecomm"
+              onClose={() => handleCloseWindow("securecomm")}
+              onMinimize={() => handleMinimizeWindow("securecomm")}
+              isActive={activeWindow === "securecomm"}
+              onFocus={() => bringToFront("securecomm")}
+              initialX={getInitialPosition("securecomm").x}
+              initialY={getInitialPosition("securecomm").y}
+              zIndex={getWin("securecomm")!.zIndex}
+            />
+          </div>
+        )}
+
+        {getWin("dossier") && (
+          <div key="win-dossier" style={{ display: getWin("dossier")!.minimized ? "none" : "contents" }}>
+            <DossierApp
+              key="dossier"
+              onClose={() => handleCloseWindow("dossier")}
+              onMinimize={() => handleMinimizeWindow("dossier")}
+              isActive={activeWindow === "dossier"}
+              onFocus={() => bringToFront("dossier")}
+              initialX={getInitialPosition("dossier").x}
+              initialY={getInitialPosition("dossier").y}
+              zIndex={getWin("dossier")!.zIndex}
+            />
+          </div>
+        )}
+
+        {windows.filter(w => w.id.startsWith("mediaviewer-")).map((win) => (
+          <div key={win.id} style={{ display: win.minimized ? "none" : "contents" }}>
+            <MediaViewerApp
+              key={win.id}
+              onClose={() => handleCloseWindow(win.id)}
+              onMinimize={() => handleMinimizeWindow(win.id)}
+              isActive={activeWindow === win.id}
+              onFocus={() => bringToFront(win.id)}
+              initialX={getInitialPosition("mediaviewer").x}
+              initialY={getInitialPosition("mediaviewer").y}
+              zIndex={win.zIndex}
+              fileName={win.props?.fileName ?? ""}
+              fileUrl={win.props?.fileUrl ?? ""}
+              fileType={(win.props?.fileType ?? "unknown") as MediaType}
+            />
+          </div>
         ))}
       </AnimatePresence>
       </div>{/* end windows layer */}

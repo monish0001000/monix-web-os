@@ -54,3 +54,27 @@ export function playCloseSound(): void {
   } catch (_) {
   }
 }
+
+export function playCyberPulseSound(): void {
+  try {
+    const ctx = getCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(260, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(840, ctx.currentTime + 0.08);
+
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.17);
+  } catch (_) {
+  }
+}

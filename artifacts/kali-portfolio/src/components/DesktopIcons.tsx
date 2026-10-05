@@ -465,6 +465,37 @@ function ThreatModelerIcon() {
   );
 }
 
+function RedTeamDesktopIcon() {
+  return (
+    <svg viewBox="0 0 36 36" width="36" height="36" fill="none">
+      <defs>
+        <radialGradient id="rtBg" cx="50%" cy="50%" r="60%">
+          <stop offset="0%" stopColor="#2a0005" />
+          <stop offset="100%" stopColor="#0d0002" />
+        </radialGradient>
+        <radialGradient id="rtGlow" cx="50%" cy="50%" r="55%">
+          <stop offset="0%" stopColor="#ef4444" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="rtShield" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f43f5e" />
+          <stop offset="100%" stopColor="#991b1b" />
+        </linearGradient>
+      </defs>
+      <rect width="36" height="36" rx="6" fill="url(#rtBg)" stroke="#4a040a" strokeWidth="0.8" />
+      <circle cx="18" cy="18" r="13" fill="url(#rtGlow)" opacity="0.35" />
+      <path d="M18 5 L28 9 L28 19 C28 25.5 18 32 18 32 C18 32 8 25.5 8 19 L8 9 Z" fill="url(#rtShield)" opacity="0.2" />
+      <path d="M18 6.5 L27 10 L27 19 C27 24.5 18 30.5 18 30.5 C18 30.5 9 24.5 9 19 L9 10 Z" fill="none" stroke="url(#rtShield)" strokeWidth="1.3" opacity="0.9" />
+      <circle cx="18" cy="18" r="6" stroke="#ef4444" strokeWidth="1" strokeDasharray="2 2" opacity="0.8" />
+      <circle cx="18" cy="18" r="2.5" fill="#10b981" />
+      <line x1="18" y1="10" x2="18" y2="14" stroke="#ef4444" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="18" y1="22" x2="18" y2="26" stroke="#ef4444" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="10" y1="18" x2="14" y2="18" stroke="#ef4444" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="22" y1="18" x2="26" y2="18" stroke="#ef4444" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const ICONS_COL1 = [
   { id: "home",       label: "Home",        icon: <HomeIcon />,       window: "files"     },
   { id: "trash",      label: "Trash",       icon: <TrashIcon />,      window: "trash"     },
@@ -485,6 +516,10 @@ const ICONS_COL2 = [
   { id: "settings",     label: "Settings",      icon: <SettingsIcon />,       window: "settings"     },
   { id: "securecomm",   label: "MONIX-COMM",    icon: <SecureCommIcon />,     window: "securecomm"   },
   { id: "dossier",      label: "Dossier",       icon: <DossierIcon />,        window: "dossier"      },
+];
+
+const ICONS_COL3 = [
+  { id: "redteam",      label: "Red Team",       icon: <RedTeamDesktopIcon />, window: "redteam"      },
 ];
 
 function IconItem({
@@ -595,10 +630,19 @@ export default function DesktopIcons({
 }: DesktopIconsProps) {
   return (
     <div
-      className="absolute flex flex-row z-10 font-sans"
-      style={{ top: 40, left: 10, gap: 4, alignItems: "flex-start" }}
+      className="absolute z-10 font-sans"
+      style={{
+        position: "absolute",
+        top: 40,
+        left: 10,
+        display: "flex",
+        gap: 16,
+        pointerEvents: "auto",
+        width: "auto",
+        bottom: 40,
+      }}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, width: 70 }}>
         {ICONS_COL1.map((item) => (
           <IconItem
             key={item.id}
@@ -611,8 +655,21 @@ export default function DesktopIcons({
           />
         ))}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, width: 70 }}>
         {ICONS_COL2.map((item) => (
+          <IconItem
+            key={item.id}
+            item={item}
+            selectedIcon={selectedIcon}
+            onSelectIcon={onSelectIcon}
+            onOpenWindow={onOpenWindow}
+            onLongPress={onLongPress}
+            dragConstraintsRef={dragConstraintsRef}
+          />
+        ))}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, width: 70 }}>
+        {ICONS_COL3.map((item) => (
           <IconItem
             key={item.id}
             item={item}

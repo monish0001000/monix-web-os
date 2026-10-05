@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import {
   Volume2, VolumeX, Bell, BatteryCharging, Battery,
-  Wifi, WifiOff, FolderOpen, TerminalSquare, Monitor,
-  Github, Trash2, Power, Globe, Sparkles, Mic, MicOff,
+  Wifi, WifiOff, Power, Mic, MicOff,
 } from "lucide-react";
-import { SiFirefox } from "react-icons/si";
 import { useOSStore } from "@/lib/store";
 import StartMenu from "./StartMenu";
+import CyberAppIcon, { getCyberAppTheme } from "./CyberAppIcon";
+import { playClickSound, playCyberPulseSound } from "@/utils/SoundEngine";
+import homeLauncherLogo from "@/assets/home-launcher.png";
 
 interface OpenWindowInfo {
   id: string;
@@ -81,19 +82,6 @@ function FpsCounter() {
   );
 }
 
-const TASKBAR_ICON: Record<string, React.ReactNode> = {
-  terminal:  <TerminalSquare size={17} color="#c8e6c9" />,
-  files:     <FolderOpen size={17} color="#a8c4f5" />,
-  trash:     <Trash2 size={17} color="#aaaacc" />,
-  github:    <Github size={17} color="#e0e0e0" />,
-  portfolio: <Monitor size={17} color="#90d090" />,
-  browser:   <Globe size={17} color="#7ec8e3" />,
-  sentinel:  <Monitor size={17} color="#00c4ff" />,
-  aura:      <Sparkles size={17} color="#c084fc" />,
-  threatmap: <Globe size={17} color="#ff6060" />,
-  codepad:   <TerminalSquare size={17} color="#00c4ff" />,
-};
-
 type TrayPopover = "battery" | "network" | "sound" | "notifications" | null;
 
 export default function TopPanel({ openWindows: _openWindows = [], onOpenWindow, onTaskbarClick, activeWindowId }: TopPanelProps) {
@@ -107,6 +95,11 @@ export default function TopPanel({ openWindows: _openWindows = [], onOpenWindow,
   const [showCalendar, setShowCalendar] = useState(false);
   const [trayPopover, setTrayPopover] = useState<TrayPopover>(null);
   const [showStartMenu, setShowStartMenu] = useState(false);
+
+  // M Launcher button custom animation states
+  const [isHomeActivating, setIsHomeActivating] = useState(false);
+  const [shockwaves, setShockwaves] = useState<{ id: number }[]>([]);
+  const [sparks, setSparks] = useState<{ id: number; angle: number; dist: number; color: string }[]>([]);
 
   // Battery state
   const [batteryLevel, setBatteryLevel] = useState<number>(100);
@@ -187,23 +180,11 @@ export default function TopPanel({ openWindows: _openWindows = [], onOpenWindow,
   const btnClass = "flex items-center justify-center cursor-pointer transition-colors hover:bg-white/10 h-full px-2.5";
 
   const appLaunchers = [
-    { id: "files",   icon: <FolderOpen size={16} color="#a8c4f5" />, title: "File Manager" },
-    { id: "firefox", icon: <SiFirefox size={15} color="#ff6611" />, title: "Firefox", action: () => window.open("https://mozilla.org", "_blank") },
-    { id: "terminal",icon: <TerminalSquare size={16} color="#c8e6c9" />, title: "Terminal" },
-    {
-      id: "aura",
-      icon: (
-        <div style={{
-          width: 20, height: 20, borderRadius: "50%",
-          background: "linear-gradient(135deg, #7c3aed, #c084fc)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 0 8px rgba(192,132,252,0.7)",
-        }}>
-          <Sparkles size={11} color="#fff" strokeWidth={2} />
-        </div>
-      ),
-      title: "AURA AI",
-    },
+    { id: "terminal", appId: "terminal", title: "Root Terminal (Kali Linux Core)" },
+    { id: "browser",  appId: "browser",  title: "NetRunner Browser" },
+    { id: "files",    appId: "files",    title: "VFS Cloud Vault" },
+    { id: "sentinel", appId: "sentinel", title: "Sentinel SOC" },
+    { id: "aura",     appId: "aura",     title: "AURA Neural AI" },
   ];
 
   const now = time;
@@ -219,6 +200,28 @@ export default function TopPanel({ openWindows: _openWindows = [], onOpenWindow,
   };
 
   const handleLogoClick = () => {
+    playCyberPulseSound();
+    setIsHomeActivating(true);
+    setTimeout(() => setIsHomeActivating(false), 550);
+
+    // Shockwave pulse
+    const swId = Date.now();
+    setShockwaves((prev) => [...prev.slice(-2), { id: swId }]);
+    setTimeout(() => {
+      setShockwaves((prev) => prev.filter((sw) => sw.id !== swId));
+    }, 750);
+
+    // Radial particle burst
+    const colors = ["#00f0ff", "#38bdf8", "#c084fc", "#e879f9", "#00ff88"];
+    const newSparks = Array.from({ length: 16 }).map((_, i) => ({
+      id: Date.now() + i,
+      angle: (i / 16) * Math.PI * 2,
+      dist: 34 + (i % 4) * 10,
+      color: colors[i % colors.length],
+    }));
+    setSparks(newSparks);
+    setTimeout(() => setSparks([]), 600);
+
     setTrayPopover(null);
     setShowCalendar(false);
     setShowStartMenu((v) => !v);
@@ -252,93 +255,233 @@ export default function TopPanel({ openWindows: _openWindows = [], onOpenWindow,
       />
 
       <div
-        className="w-full h-full select-none font-sans flex items-stretch justify-between"
+        className="w-full h-full select-none font-sans flex items-stretch justify-between relative"
         style={{
-          background: "rgba(0,0,0,0.45)",
-          backdropFilter: "blur(18px) saturate(160%)",
-          WebkitBackdropFilter: "blur(18px) saturate(160%)",
-          borderTop: "1px solid rgba(255,255,255,0.10)",
-          boxShadow: "0 -2px 20px rgba(0,0,0,0.4)",
+          background: "linear-gradient(180deg, rgba(8, 12, 22, 0.95) 0%, rgba(3, 6, 12, 0.98) 100%)",
+          backdropFilter: "blur(24px) saturate(180%)",
+          WebkitBackdropFilter: "blur(24px) saturate(180%)",
+          borderTop: "1px solid rgba(0, 240, 255, 0.3)",
+          boxShadow: "0 -4px 30px rgba(0, 0, 0, 0.85), 0 -1px 8px rgba(0, 240, 255, 0.2)",
         }}
       >
-        {/* ── LEFT ── */}
-        <div className="flex items-center h-full gap-0">
+        {/* Holographic Top Laser Rail */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 1,
+            background: "linear-gradient(90deg, transparent 0%, rgba(0, 240, 255, 0.6) 20%, rgba(168, 85, 247, 0.7) 50%, rgba(0, 240, 255, 0.6) 80%, transparent 100%)",
+            pointerEvents: "none",
+            zIndex: 10,
+          }}
+        />
 
-          {/* Logo — MONIX "M" */}
-          <div
-            className="flex items-center justify-center cursor-pointer h-full transition-colors"
-            style={{
-              paddingLeft: 10, paddingRight: 10,
-              background: showStartMenu ? "rgba(0,212,255,0.15)" : "transparent",
-              borderRight: showStartMenu ? "1px solid rgba(0,212,255,0.3)" : "1px solid transparent",
-            }}
-            title="Applications"
-            onClick={handleLogoClick}
-          >
-            <span
+        {/* ── LEFT SECTION ── */}
+        <div className="flex items-center h-full gap-0 z-20">
+
+          {/* ── "M" Launcher Home Button with Steroid Kali Animation ── */}
+          <div className="relative flex items-center h-full px-2">
+            {/* Expanding Cybernetic Shockwave Rings */}
+            <AnimatePresence>
+              {shockwaves.map((sw) => (
+                <motion.div
+                  key={sw.id}
+                  initial={{ scale: 0.5, opacity: 1, borderWidth: "2px" }}
+                  animate={{ scale: 3.4, opacity: 0, borderWidth: "1px" }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: 38,
+                    height: 38,
+                    borderRadius: 8,
+                    borderColor: "#00f0ff",
+                    borderStyle: "solid",
+                    boxShadow: "0 0 20px #00f0ff, inset 0 0 10px #00f0ff",
+                    pointerEvents: "none",
+                    zIndex: 60,
+                  }}
+                />
+              ))}
+            </AnimatePresence>
+
+            {/* Cyber Radial Particle Sparks */}
+            {sparks.map((spark) => (
+              <motion.div
+                key={spark.id}
+                initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+                animate={{
+                  x: Math.cos(spark.angle) * spark.dist,
+                  y: Math.sin(spark.angle) * spark.dist,
+                  scale: 0.1,
+                  opacity: 0,
+                }}
+                transition={{ duration: 0.55, ease: "easeOut" }}
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  width: 3.5,
+                  height: 3.5,
+                  borderRadius: "50%",
+                  background: spark.color,
+                  boxShadow: `0 0 8px ${spark.color}`,
+                  pointerEvents: "none",
+                  zIndex: 61,
+                }}
+              />
+            ))}
+
+            {/* Kinetic "M" Home Button */}
+            <motion.button
+              onClick={handleLogoClick}
+              title="MONIX Cyber Nexus (Kali Linux Launcher)"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.90 }}
+              animate={isHomeActivating ? {
+                scale: [1, 0.86, 1.12, 1],
+                filter: [
+                  "brightness(1)",
+                  "brightness(2.4) drop-shadow(0 0 18px #00f0ff)",
+                  "brightness(1.5) drop-shadow(0 0 10px #c084fc)",
+                  "brightness(1)",
+                ],
+              } : {}}
+              transition={{ duration: 0.45 }}
               style={{
-                fontFamily: "'Ubuntu', 'Inter', sans-serif",
-                fontSize: 17,
-                fontWeight: 900,
-                letterSpacing: "-0.02em",
-                color: "#00c4ff",
-                textShadow: "0 0 8px rgba(0,196,255,0.7), 0 0 2px rgba(0,128,255,0.5)",
-                lineHeight: 1,
-                userSelect: "none",
-                display: "inline-block",
+                width: 36,
+                height: 34,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: showStartMenu
+                  ? "linear-gradient(135deg, rgba(0, 240, 255, 0.28) 0%, rgba(168, 85, 247, 0.28) 100%)"
+                  : "linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(2, 6, 23, 0.98) 100%)",
+                border: showStartMenu
+                  ? "1px solid rgba(0, 240, 255, 0.75)"
+                  : "1px solid rgba(0, 240, 255, 0.25)",
+                borderRadius: 7,
+                boxShadow: showStartMenu
+                  ? "0 0 24px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.25)"
+                  : "0 2px 10px rgba(0, 0, 0, 0.6)",
+                cursor: "pointer",
+                position: "relative",
+                overflow: "hidden",
               }}
             >
-              M
-            </span>
+              {/* Standalone Minimalist Monogram Asset */}
+              <img
+                src={homeLauncherLogo}
+                alt="MONIX Home"
+                style={{
+                  width: 22,
+                  height: 22,
+                  objectFit: "contain",
+                  filter: showStartMenu
+                    ? "drop-shadow(0 0 8px #00f0ff) drop-shadow(0 0 14px #a855f7) brightness(1.2)"
+                    : "drop-shadow(0 0 3px rgba(0, 240, 255, 0.5))",
+                  transition: "filter 0.3s ease, transform 0.3s ease",
+                }}
+              />
+            </motion.button>
           </div>
 
-          <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.1)" }} />
+          <div style={{ width: 1, height: 22, background: "rgba(0, 240, 255, 0.2)", marginLeft: 2 }} />
 
-          {/* App launchers */}
-          {appLaunchers.map((launcher) => (
-            <div
-              key={launcher.id}
-              className={btnClass}
-              title={launcher.title}
-              onClick={() => {
-                setShowStartMenu(false);
-                launcher.action ? launcher.action() : onOpenWindow(launcher.id);
-              }}
-            >
-              {launcher.icon}
-            </div>
-          ))}
-
-          <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.1)", marginLeft: 2 }} />
-
-          {/* Workspace switcher — hidden on mobile */}
-          {!isMobile && (
-            <div className="flex items-center h-full px-1.5 gap-0.5">
-              {[1, 2, 3, 4].map((n) => (
-                <div
-                  key={n}
-                  onClick={() => setActiveWorkspace(n)}
+          {/* Quick Launchers — Clean default state with high-intensity hover-only glow */}
+          <div className="flex items-center h-full px-1 gap-1">
+            {appLaunchers.map((launcher) => {
+              const theme = getCyberAppTheme(launcher.appId);
+              return (
+                <button
+                  key={launcher.id}
+                  className="flex items-center justify-center cursor-pointer transition-all duration-200 h-full px-2 relative group hover:bg-white/5"
+                  title={launcher.title}
+                  onClick={() => {
+                    playClickSound();
+                    setShowStartMenu(false);
+                    onOpenWindow(launcher.id);
+                  }}
                   style={{
-                    width: 22, height: 20, display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 11, fontWeight: 500, cursor: "pointer",
-                    border: activeWorkspace === n ? "1px solid #367BF0" : "1px solid rgba(255,255,255,0.15)",
-                    background: activeWorkspace === n ? "rgba(54,123,240,0.35)" : "rgba(255,255,255,0.04)",
-                    color: activeWorkspace === n ? "#90bfff" : "rgba(255,255,255,0.55)",
-                    transition: "all 0.1s",
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    borderRadius: 4,
                   }}
                 >
-                  {n}
-                </div>
+                  <div
+                    className="p-1 rounded transition-all duration-200 group-hover:scale-115 group-hover:brightness-125"
+                    style={{
+                      transition: "transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.filter = `drop-shadow(0 0 8px ${theme.color}) drop-shadow(0 0 16px ${theme.color}aa)`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.filter = "none";
+                    }}
+                  >
+                    <CyberAppIcon appId={launcher.appId} size={17} glow={false} />
+                  </div>
+                  {/* Subtle glowing indicator dot on hover only */}
+                  <div
+                    className="absolute bottom-0.5 w-1.5 h-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    style={{ background: theme.color, boxShadow: `0 0 8px ${theme.color}` }}
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ width: 1, height: 22, background: "rgba(0, 240, 255, 0.2)", marginLeft: 2 }} />
+
+          {/* Tactical Workspace Switcher — hidden on mobile */}
+          {!isMobile && (
+            <div className="flex items-center h-full px-2 gap-1">
+              {[1, 2, 3, 4].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => {
+                    playClickSound();
+                    setActiveWorkspace(n);
+                  }}
+                  title={`Switch to Sector 0${n}`}
+                  style={{
+                    width: 28,
+                    height: 22,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 9.5,
+                    fontFamily: "monospace",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    borderRadius: 4,
+                    border: activeWorkspace === n ? "1px solid #00f0ff" : "1px solid rgba(255, 255, 255, 0.08)",
+                    background: activeWorkspace === n ? "rgba(0, 240, 255, 0.2)" : "rgba(255, 255, 255, 0.02)",
+                    color: activeWorkspace === n ? "#00f0ff" : "rgba(255, 255, 255, 0.45)",
+                    boxShadow: activeWorkspace === n ? "0 0 10px rgba(0, 240, 255, 0.35), inset 0 0 4px rgba(0, 240, 255, 0.2)" : "none",
+                    transition: "all 0.15s ease",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  0{n}
+                </button>
               ))}
             </div>
           )}
 
-          {/* ── Active process tabs (Zustand-driven) ── */}
+          {/* ── Active Process Tabs (Zustand-driven, High-Fidelity Neo-Cyberpunk) ── */}
           {activeProcesses.length > 0 && (
             <>
-              <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.1)", marginLeft: 4 }} />
+              <div style={{ width: 1, height: 22, background: "rgba(0, 240, 255, 0.2)", marginLeft: 2, marginRight: 2 }} />
               <div
-                className="flex items-center h-full gap-[3px] px-1"
+                className="flex items-center h-full gap-1.5 px-1"
                 style={{
                   flex: isMobile ? "1 1 0" : "0 1 auto",
                   maxWidth: isMobile ? "100%" : "calc(100vw - 520px)",
@@ -347,42 +490,166 @@ export default function TopPanel({ openWindows: _openWindows = [], onOpenWindow,
                   msOverflowStyle: "none",
                 } as React.CSSProperties}
               >
-                {activeProcesses.map((proc) => {
-                  const isActive = activeWindowId === proc.id;
-                  const isSuspended = proc.isMinimized;
-                  return (
-                    <button
-                      key={proc.id}
-                      onClick={() => onTaskbarClick(proc.id)}
-                      title={`${proc.name}  [${proc.pid}]`}
-                      style={{
-                        width: 36,
-                        height: 28,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        padding: 0,
-                        cursor: "pointer", borderRadius: 5,
-                        background: isActive
-                          ? "rgba(0,212,255,0.13)"
-                          : isSuspended
-                          ? "rgba(255,255,255,0.03)"
-                          : "rgba(255,255,255,0.07)",
-                        border: isActive
-                          ? "1px solid rgba(0,212,255,0.35)"
-                          : "1px solid rgba(255,255,255,0.07)",
-                        borderBottom: isActive
-                          ? "2px solid #00d4ff"
-                          : isSuspended
-                          ? "2px solid rgba(245,158,11,0.5)"
-                          : "2px solid rgba(255,255,255,0.12)",
-                        boxShadow: isActive ? "0 0 10px rgba(0,212,255,0.25), inset 0 0 8px rgba(0,212,255,0.06)" : "none",
-                        position: "relative", transition: "all 0.12s", flexShrink: 0,
-                        opacity: isSuspended ? 0.55 : 1,
-                      }}
-                    >
-                      <span style={{ fontSize: 16, lineHeight: 1 }}>{proc.icon}</span>
-                    </button>
-                  );
-                })}
+                <AnimatePresence initial={false}>
+                  {activeProcesses.map((proc) => {
+                    const isActive = activeWindowId === proc.id;
+                    const isSuspended = proc.isMinimized;
+                    const theme = getCyberAppTheme(proc.id);
+
+                    return (
+                      <motion.div
+                        key={proc.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.88, y: 6 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: -6 }}
+                        transition={{ duration: 0.15 }}
+                        onClick={() => {
+                          playClickSound();
+                          onTaskbarClick(proc.id);
+                        }}
+                        className="group"
+                        title={`${proc.name} [${proc.pid}] — ${isSuspended ? "Suspended (Click to restore)" : isActive ? "Active (Click to minimize)" : "Running (Click to focus)"}`}
+                        style={{
+                          height: 32,
+                          minWidth: isMobile ? 38 : 124,
+                          maxWidth: isMobile ? 42 : 180,
+                          padding: isMobile ? "0 6px" : "0 10px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 7,
+                          cursor: "pointer",
+                          position: "relative",
+                          borderRadius: "5px 5px 0 0",
+                          background: isActive
+                            ? `linear-gradient(180deg, ${theme.color}25 0%, rgba(10, 16, 28, 0.95) 100%)`
+                            : isSuspended
+                            ? "rgba(16, 20, 30, 0.65)"
+                            : "rgba(255, 255, 255, 0.04)",
+                          borderTop: isActive ? `1px solid ${theme.color}bb` : "1px solid rgba(255, 255, 255, 0.08)",
+                          borderLeft: isActive ? `1px solid ${theme.color}66` : "1px solid rgba(255, 255, 255, 0.06)",
+                          borderRight: isActive ? `1px solid ${theme.color}66` : "1px solid rgba(255, 255, 255, 0.06)",
+                          borderBottom: "none",
+                          boxShadow: isActive
+                            ? `0 -2px 14px ${theme.color}35, inset 0 1px 0 rgba(255, 255, 255, 0.2)`
+                            : "none",
+                          backdropFilter: "blur(8px)",
+                          userSelect: "none",
+                          transition: "all 0.15s ease",
+                          overflow: "hidden",
+                          flexShrink: 0,
+                          opacity: isSuspended ? 0.65 : 1,
+                        }}
+                      >
+                        {/* Glowing Laser Rail on Top */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: 2,
+                            background: isActive
+                              ? `linear-gradient(90deg, transparent, ${theme.color}, transparent)`
+                              : isSuspended
+                              ? "linear-gradient(90deg, transparent, #f59e0b, transparent)"
+                              : "transparent",
+                            boxShadow: isActive ? `0 0 8px ${theme.color}` : "none",
+                          }}
+                        />
+
+                        {/* High-Fidelity Neo-Cyberpunk Vector Icon */}
+                        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <CyberAppIcon appId={proc.id} size={16} glow={isActive} />
+                        </div>
+
+                        {/* App Title & PID (Desktop) */}
+                        {!isMobile && (
+                          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: isActive ? 700 : 500,
+                                color: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.75)",
+                                fontFamily: "'Ubuntu', 'Rajdhani', sans-serif",
+                                letterSpacing: "0.02em",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                lineHeight: 1.15,
+                              }}
+                            >
+                              {proc.name}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 8.5,
+                                color: isActive ? theme.color : "rgba(255, 255, 255, 0.35)",
+                                fontFamily: "monospace",
+                                letterSpacing: "0.06em",
+                                lineHeight: 1,
+                              }}
+                            >
+                              {isSuspended ? "SUSP" : proc.pid}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Status LED Indicator */}
+                        <div
+                          style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: "50%",
+                            flexShrink: 0,
+                            background: isSuspended ? "#f59e0b" : isActive ? theme.color : "rgba(255, 255, 255, 0.3)",
+                            boxShadow: isSuspended
+                              ? "0 0 6px #f59e0b"
+                              : isActive
+                              ? `0 0 6px ${theme.color}`
+                              : "none",
+                          }}
+                        />
+
+                        {/* Direct Kill Button on Hover (Desktop) */}
+                        {!isMobile && (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playClickSound();
+                              useOSStore.getState().killProcess(proc.id);
+                            }}
+                            title="Terminate process"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{
+                              width: 14,
+                              height: 14,
+                              borderRadius: 3,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 10,
+                              color: "rgba(255, 255, 255, 0.6)",
+                              background: "rgba(255, 255, 255, 0.1)",
+                              flexShrink: 0,
+                              marginLeft: "auto",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = "#ff4444";
+                              e.currentTarget.style.background = "rgba(255, 50, 50, 0.3)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = "rgba(255, 255, 255, 0.6)";
+                              e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+                            }}
+                          >
+                            ×
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
             </>
           )}

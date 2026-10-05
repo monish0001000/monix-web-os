@@ -4,8 +4,29 @@ export interface VFSNode {
   name: string;        // display name
   type: "folder" | "file";
   parentId: string;    // "root" for top-level, else parent folder id
-  url?: string;        // bundled asset URL (files only)
+  url?: string;        // bundled asset URL or object URL / data URL (files only)
   ext?: string;        // lowercase extension (files only)
+  size?: number;       // bytes (optional)
+  isUserCreated?: boolean;
+}
+
+const USER_VFS_STORAGE_KEY = "monix_user_vfs_nodes";
+
+export function getUserVFSNodes(): VFSNode[] {
+  try {
+    const raw = localStorage.getItem(USER_VFS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveUserVFSNodes(nodes: VFSNode[]) {
+  try {
+    localStorage.setItem(USER_VFS_STORAGE_KEY, JSON.stringify(nodes));
+  } catch (err) {
+    console.warn("[VFS] Failed to persist user VFS nodes to localStorage:", err);
+  }
 }
 
 // ─── Build tree from Vite glob output ─────────────────────────────────────────
@@ -54,10 +75,29 @@ export function buildVFSTree(rawFiles: Record<string, string>): VFSNode[] {
     });
   }
 
+  // Merge user-created files/folders from localStorage
+  const userNodes = getUserVFSNodes();
+  for (const u of userNodes) {
+    if (!nodes.some(n => n.id === u.id)) {
+      nodes.push(u);
+    }
+  }
+
+  // Ensure default Downloads folder exists
+  if (!nodes.some(n => n.id === "Downloads")) {
+    nodes.push({
+      id: "Downloads",
+      name: "Downloads",
+      type: "folder",
+      parentId: "root",
+      isUserCreated: true,
+    });
+  }
+
   return nodes;
 }
 
-// ─── Run the glob scan (called once at startup) ────────────────────────────────
+// ─── Run the glob scan (called at startup or reload) ──────────────────────────
 export function scanStorage(): VFSNode[] {
   // Vite resolves this at build-time; eager:true makes it synchronous
   const rawFiles = import.meta.glob("/src/storage/**/*", {

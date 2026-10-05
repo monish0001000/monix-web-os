@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Activity, Cpu, MemoryStick } from "lucide-react";
 import WindowChrome from "./WindowChrome";
 import { useOSStore, type OSProcess } from "@/lib/store";
+import CyberAppIcon from "./CyberAppIcon";
 
 interface TaskManagerAppProps {
   onClose: () => void;
@@ -251,8 +252,10 @@ export default function TaskManagerApp({
                   onMouseEnter={(e) => { if (!isBeingKilled) (e.currentTarget as HTMLDivElement).style.background = "rgba(0,240,255,0.035)"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
                 >
-                  {/* Icon */}
-                  <span style={{ fontSize: 15, lineHeight: 1 }}>{proc.icon}</span>
+                  {/* Cyber Icon */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 20, height: 20 }}>
+                    <CyberAppIcon appId={proc.id} size={15} glow={!proc.isMinimized} />
+                  </div>
 
                   {/* Name */}
                   <span style={{ fontSize: 11, color: proc.isMinimized ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.85)", letterSpacing: "0.03em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 8 }}>
