@@ -141,7 +141,7 @@ export async function fetchLiveGoogleResults(query: string, page: number = 1): P
         },
         signal: AbortSignal.timeout(2500),
       }
-    ).then((r) => r.json()),
+    ).then((r) => r.json() as Promise<any>),
 
     // High accuracy live web search with 4.5s timeout
     fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(cleanQuery)}`, {
@@ -158,7 +158,7 @@ export async function fetchLiveGoogleResults(query: string, page: number = 1): P
     // Wikipedia summary for Knowledge Graph card with 2.5s timeout
     fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanQuery)}`, {
       signal: AbortSignal.timeout(2500),
-    }).then((r) => (r.ok ? r.json() : null)),
+    }).then((r) => (r.ok ? (r.json() as Promise<any>) : null)),
   ]);
 
   // 1. Extract Google AutoComplete suggestions for Real Google Related Searches
